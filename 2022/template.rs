@@ -8,8 +8,9 @@ fn main() -> std::io::Result<()> {
     let mut reader = BufReader::new(f);
     let mut line = String::new();
     
-    let mut end = false;
+    let result = 0;
 
+    let mut end = false;
     while !end {
         match reader.read_line(&mut line) {
             Ok(0) => {
@@ -24,7 +25,6 @@ fn main() -> std::io::Result<()> {
         line.clear();
 
     }
-    let result = 0;
     println!("Result {}", result);
     Ok(())
 }
