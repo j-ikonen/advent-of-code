@@ -1,4 +1,3 @@
-use core::panic;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::File;
@@ -16,18 +15,18 @@ fn main() -> std::io::Result<()> {
     let mut reader = BufReader::new(f);
     let mut line = String::new();
     
-    let mut root = Dir {
-        name: String::from("/"), 
-        id: 0,
-        dirs: Vec::new(), 
-        size: 0
-    };
     let mut dirs: Vec<Dir> = Vec::new();
     let mut path: Vec<usize> = Vec::new();
     let mut sum = 0;
     let mut id: usize = 1;
+    
+    dirs.push(Dir {
+        name: String::from("/"), 
+        id: 0,
+        dirs: Vec::new(), 
+        size: 0
+    });
 
-    let result = 0;
 
     let mut end = false;
     while !end {
@@ -39,80 +38,99 @@ fn main() -> std::io::Result<()> {
             Ok(_) => {
                 // Parse the line
                 let spl: Vec<&str> = line.split(' ').collect();
-                match spl[0] {
-                    // User command
-                    "$" => {
-                        match spl[1] {
-                            "cd" => {
-                                // Go back to parent directory
-                                if spl[2] == ".." {
-                                    path.pop();
-                                
-                                // Jump to root
-                                } else if spl[2] == "/" {
-                                    path.clear();
-                                    path.push(0);
-                                } else {
-                                    match path.last() {
-                                        // Path is empty
-                                        None => {
-                                            if spl[2] == "/" {
-                                                path.push(0);
-                                            } else {
-                                                panic!("non root cd on empty path.");
-                                            }
-                                        },
-                                        // cd dirname
-                                        // Some(current dir)
-                                        Some(&idx) => {
-                                            let mut found = false;
+                
+                // Change directory
+                let cwd = *path.last().unwrap_or(&0);
+                if spl[0] == "$" && spl[1] == "cd" {
+                    
+                    // println!("dir: {}, size: {}", dirs[cwd].name, dirs[cwd].size);
+                    // Go to root
+                    if spl[2] == "/\n" {
+                        path.clear();
+                        path.push(0);
+                        println!("cd / asd");
+                    // Go up on step
+                    } else if spl[2] == "..\n" {
+                        path.pop().unwrap();
+                        // println!("cd .. asd");
 
-                                            // Subdirectory exists
-                                            for &sidx in dirs[idx].dirs.iter() {
-                                                if dirs[sidx].name == spl[2] {
-                                                    path.push(sidx);
-                                                    found = true;
-                                                    break;
-                                                }
-                                            }
-                                            // Create and move to subdir
-                                            if !found {
-                                                dirs.push( Dir {
-                                                    name: String::from(spl[2]),
-                                                    id: id,
-                                                    dirs: Vec::new(),
-                                                    size: 0
-                                                });
-                                                id += 1;
-                                                path.push(id);
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            // List files and directories
-                            "ls" => {},
-                            e => panic!("undefined user command {}", e),
-                        }
-                    },
-                    "dir" => {
-                        let cwd = *path.last().unwrap();
-                        let dr = &dirs[cwd].dirs;
-                        for &idx in dr.iter() {
-                            if dirs[idx].name == spl[1] {
-                                unimplemented!()        
+                    // Go to directory within cwd
+                    } else {
+                        let mut found = false;
+                        // println!("cd {}", spl[2]);
+                        for &d in dirs[cwd].dirs.iter() {
+                            if dirs[d].name == spl[2] { 
+                                found = true; 
+                                path.push(d);
+                                break; 
                             }
                         }
-                    },
-                    _ => {}
+                        if !found {
+                            dirs.push( Dir {
+                                name: String::from(spl[2]),
+                                id: id,
+                                dirs: Vec::new(),
+                                size: 0,
+                            } );
+                            dirs[cwd].dirs.push(id);
+                            path.push(id);
+                            id += 1;
+                        }
+
+                    }
+                    // println!("path: {:?}", path);
+                } else if spl[0] == "$" && spl[1] == "ls\n" {
+                    dirs[cwd].size = 0;
+                    // println!("ls");
+                // Register a new directory in cwd
+                } else if spl[0] == "dir" {
+                    
+                // Add file size to dir size
+                } else {
+                    // println!("parse: {:?}", spl);
+                    dirs[cwd].size += spl[0].parse::<u64>().unwrap();
+                    // println!("file: {}", spl[0]);
                 }
-                
             },
             Err(e) => panic!("Failed to read a line. {}", e),
         };
         line.clear();
 
     }
-    println!("Result {}", result);
+
+    // Collect directory sizes
+    let mut v: Vec<(usize, u64)> = Vec::new();
+    dir_sizes(&mut v, &dirs, 0);
+    // println!("DIR SIZES");
+    // for a in v.iter() {
+    //     println!("id:{}, size: {}", a.0, a.1);
+    // }
+    // The minimum amount of space that needs to be freed
+    let min_to_free = v.last().unwrap().1 + 30000000 - 70000000;
+    println!("min to free: {}", min_to_free);
+
+    let mut min_dir: (usize, u64) = (0, v.last().unwrap().1);
+
+    // Sum the small enough directories
+    for (id, sz) in v.iter() {
+        if sz < &100000 { sum += sz; }
+        if *sz > min_to_free && *sz < min_dir.1 {
+            min_dir = (*id, *sz);
+        } 
+    }
+    println!("dir size to delete: {}", min_dir.1);
+
+
+
+    println!("Result {}", sum);
     Ok(())
+}
+
+fn dir_sizes(v: &mut Vec<(usize, u64)>, dirs: &Vec<Dir>, cwd: usize) -> u64 {
+    let mut s = dirs[cwd].size;
+    for &d in &dirs[cwd].dirs {
+        s += dir_sizes(v, dirs, d);
+    }
+    v.push((cwd, s));
+    s
 }
