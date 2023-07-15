@@ -89,6 +89,7 @@ fn main() -> std::io::Result<()> {
     //     }
     //     print!("\n");
     // }
+    let mut max_ss = 0;
     let mut trees: Vec<u32> = Vec::new();
     for col in 1..width-1 {
         for row in 1..height-1 {
@@ -96,7 +97,7 @@ fn main() -> std::io::Result<()> {
             let mut scores = [0;4];
             // top
             if row > 0 {
-                for top in (0..row-1).rev() {
+                for top in (0..row).rev() {
                     scores[0] += 1;
                     if h <= forest[top][col].0 {
                         break;
@@ -112,7 +113,7 @@ fn main() -> std::io::Result<()> {
             }
             // left
             if col > 0 {
-                for left in (0..col-1).rev() {
+                for left in (0..col).rev() {
                     scores[2] += 1;
                     if h <= forest[row][left].0 { break; }
                 }
@@ -125,15 +126,20 @@ fn main() -> std::io::Result<()> {
                 }
             }
             // println!("{:?}", scores);
+            
             let ss = scores[0] * scores[1] * scores[2] * scores[3];
+            if ss > max_ss { 
+                max_ss = ss;
+                // println!("{:?}, (row,col): ({}, {})", scores, row, col);
+            }
             trees.push(ss);
         }
     }
 
-    let mut scenic_score = 0;
-    for ss in trees {
-        if ss > scenic_score { scenic_score = ss; }
-    }
-    println!("Result {}, ss {}", count, scenic_score);
+    // let mut scenic_score = 0;
+    // for ss in trees {
+    //     if ss > scenic_score { scenic_score = ss; }
+    // }
+    println!("Result {}, ss {}", count, max_ss);
     Ok(())
 }
