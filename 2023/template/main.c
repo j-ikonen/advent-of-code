@@ -5,6 +5,8 @@
 #define MAX 160
 
 int main() {
+        int sum = 0;
+        
         FILE *fptr;
         fptr = fopen("input", "r");
         if (!fptr) {
@@ -16,6 +18,10 @@ int main() {
         while (fgets(line, MAX, fptr)) {
 
         }
+
+        printf("Resut:\n");
+        printf("%i\n", sum);
+        return 0;
 
         return 0;
 }
